@@ -1,9 +1,7 @@
 CXX                = g++ -std=c++20
-OPTFLAGS           = -O3
-AVXFLAGS           = -mavx2
-AUTOFLAGS          = -march=native -ffast-math -mavx2
-CXXFLAGS          += -Wall 
-INCLUDES           = -I. -I./include
+OPTFLAGS	   = -O3 -DNDEBUG -ffast-math
+CXXFLAGS          += -Wall -DNO_DEFAULT_MAPPING
+INCLUDES           = -I. -I./include -I ./lib/fastflow 
 LIBS               = -pthread
 SOURCES            = $(wildcard *.cpp)
 TARGETS            = $(SOURCES:.cpp=)

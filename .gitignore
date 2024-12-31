@@ -1,3 +1,4 @@
 src/*.o
 src/lib/fastflow
+src/fastflow
 .vscode

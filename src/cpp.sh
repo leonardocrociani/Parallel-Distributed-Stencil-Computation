@@ -9,4 +9,4 @@ file=$1
 shift
 base_name=$(basename "$file" .cpp)
 
-make clean && make "$base_name" && ./"$base_name".o "$@"
+make clean && make -j "$base_name" && ./"$base_name".o "$@"
