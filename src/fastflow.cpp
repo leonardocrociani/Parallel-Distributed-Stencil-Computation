@@ -1,5 +1,6 @@
 #include <cstdlib>
 #include <iostream>
+#include <numeric>
 #include <string>
 #include <vector>
 
@@ -9,11 +10,14 @@
 #include "lib/matrix.hpp"
 #include "lib/utils.hpp"
 
+//#define VERBOSE
+
 using namespace ff;
 
 struct Task {
-    uint64_t start_idx;
-    uint64_t end_idx;
+    uint64_t row_start;
+    uint64_t row_end;
+    uint64_t kth_stage;
     vector<vector<double> >* matrix;
 };
 
@@ -22,33 +26,78 @@ struct Emitter : ff_node_t<Task> {
 
     Task* svc(Task* task) override {
         if (matrix_size - kth_stage == 1) {  // we concluded all the stages but the last one
-            // TODO: compute the last stage and return
+
+#ifdef VERBOSE
+            printf("============ STARTING STAGE: %d ============\n", kth_stage);
+#endif
+
+            double dot = .0;
+            for (uint64_t i = 0; i < kth_stage; i++) {
+                double el1 = (*matrix)[0][0 + i];
+                double el2 = (*matrix)[0 + i + 1][0 + kth_stage];
+                dot += el1 * el2;
+            }
+            (*matrix)[0][0 + kth_stage] = cbrt(dot);
+
+#ifdef VERBOSE
+            printf("\n👌🏻: %.5f\n", (*matrix)[0][0 + kth_stage]);
+#endif
             return EOS;
         }
 
         if (task != nullptr) {  // task received back from a worker
-            //printf("Received back task! %d\n", task->start_idx);
             active_workers--;
         }
 
         if (active_workers == 0) {  // previous stage is completed or we just started
 
+#ifdef VERBOSE
             printf("============ STARTING STAGE: %d ============\n", kth_stage);
+#endif
 
-            for (uint64_t i = 0; i < num_workers; i++) {
-                Task* task_i = new Task();
+            // for the current kth_stage, i have to do γ = [matrix_size - k] task.
+            // if n_workers = 10, and γ = 5, i want to use just the first 5 workers.
+            // on the other hand, if num_workers = 10 and γ = 92, i want to assign 10 10 9 ... 9
 
-                task_i->start_idx = i;
-                task_i->end_idx = i;
+            int num_iterations = matrix_size - kth_stage;
 
-                active_workers++;
-                ff_send_out(task_i, i);
+            if (num_iterations < num_workers) {
+                for (uint64_t i = 0; i < num_iterations; i++) {
+                    Task* task_i = new Task();
+
+                    task_i->row_start = i;
+                    task_i->row_end = i + 1;
+                    task_i->matrix = matrix;
+                    task_i->kth_stage = kth_stage;
+
+                    active_workers++;
+                    ff_send_out(task_i, i);
+                }
+            }
+
+            else {
+                int base_tasks_assignment = num_iterations / num_workers;
+                int remainder = num_iterations % num_workers;
+                int prev = 0;
+
+                for (uint64_t i = 0; i < num_workers; i++) {
+                    Task* task_i = new Task();
+                    int iterations_to_do = base_tasks_assignment + (i < remainder ? 1 : 0);
+
+                    task_i->row_start = prev;
+                    task_i->row_end = prev + iterations_to_do;
+                    task_i->matrix = matrix;
+                    task_i->kth_stage = kth_stage;
+
+                    prev += iterations_to_do;
+
+                    active_workers++;
+                    ff_send_out(task_i, i);
+                }
             }
 
             kth_stage++;
         }
-
-        printf("👷🏻Active workers: %d\n", active_workers);
 
         return GO_ON;
     }
@@ -59,7 +108,21 @@ struct Emitter : ff_node_t<Task> {
 
 struct Worker : ff_node_t<Task> {
     Task* svc(Task* task) override {
-        printf("\tReceived task -> start_idx :: %d\n", task->start_idx);
+
+#ifdef VERBOSE
+        printf("\tReceived task -> row_start :: %d, row_end:: %d, ID: %d\n", task->row_start, task->row_end, get_my_id());
+#endif
+
+        for (uint64_t m = task->row_start; m < task->row_end; m++) {
+            double dot = .0;
+            for (uint64_t i = 0; i < task->kth_stage; i++) {
+                double el1 = (*task->matrix)[m][m + i];
+                double el2 = (*task->matrix)[m + i + 1][m + task->kth_stage];
+                dot += el1 * el2;
+            }
+            (*task->matrix)[m][m + task->kth_stage] = cbrt(dot);
+        }
+
         return task;
     }
 };
@@ -99,6 +162,7 @@ int main(int argc, char* argv[]) {
         error("running farm");
         return -1;
     }
+
     /* ========================================== */
 
     chrono.print_elapsed("WAVEFRONT");
