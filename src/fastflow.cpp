@@ -10,7 +10,7 @@
 #include "lib/matrix.hpp"
 #include "lib/utils.hpp"
 
-//#define VERBOSE
+// #define VERBOSE
 
 using namespace ff;
 
@@ -18,30 +18,14 @@ struct Task {
     uint64_t row_start;
     uint64_t row_end;
     uint64_t kth_stage;
-    vector<vector<double> >* matrix;
 };
 
 struct Emitter : ff_node_t<Task> {
     Emitter(vector<vector<double> >* matrix, uint64_t num_workers, uint64_t matrix_size) : matrix(matrix), num_workers(num_workers), matrix_size(matrix_size) {}
 
     Task* svc(Task* task) override {
-        if (matrix_size - kth_stage == 1) {  // we concluded all the stages but the last one
 
-#ifdef VERBOSE
-            printf("============ STARTING STAGE: %d ============\n", kth_stage);
-#endif
-
-            double dot = .0;
-            for (uint64_t i = 0; i < kth_stage; i++) {
-                double el1 = (*matrix)[0][0 + i];
-                double el2 = (*matrix)[0 + i + 1][0 + kth_stage];
-                dot += el1 * el2;
-            }
-            (*matrix)[0][0 + kth_stage] = cbrt(dot);
-
-#ifdef VERBOSE
-            printf("\n👌🏻: %.5f\n", (*matrix)[0][0 + kth_stage]);
-#endif
+        if (matrix_size - kth_stage == 0) {  // we concluded all the stages
             return EOS;
         }
 
@@ -67,11 +51,10 @@ struct Emitter : ff_node_t<Task> {
 
                     task_i->row_start = i;
                     task_i->row_end = i + 1;
-                    task_i->matrix = matrix;
                     task_i->kth_stage = kth_stage;
 
                     active_workers++;
-                    ff_send_out(task_i, i);
+                    ff_send_out(task_i);
                 }
             }
 
@@ -86,7 +69,6 @@ struct Emitter : ff_node_t<Task> {
 
                     task_i->row_start = prev;
                     task_i->row_end = prev + iterations_to_do;
-                    task_i->matrix = matrix;
                     task_i->kth_stage = kth_stage;
 
                     prev += iterations_to_do;
@@ -107,8 +89,11 @@ struct Emitter : ff_node_t<Task> {
 };
 
 struct Worker : ff_node_t<Task> {
-    Task* svc(Task* task) override {
 
+    Worker(vector<vector<double> >* matrix) : matrix(matrix) {}
+
+    Task* svc(Task* task) override {
+        
 #ifdef VERBOSE
         printf("\tReceived task -> row_start :: %d, row_end:: %d, ID: %d\n", task->row_start, task->row_end, get_my_id());
 #endif
@@ -116,15 +101,17 @@ struct Worker : ff_node_t<Task> {
         for (uint64_t m = task->row_start; m < task->row_end; m++) {
             double dot = .0;
             for (uint64_t i = 0; i < task->kth_stage; i++) {
-                double el1 = (*task->matrix)[m][m + i];
-                double el2 = (*task->matrix)[m + i + 1][m + task->kth_stage];
+                double el1 = (*matrix)[m][m + i];
+                double el2 = (*matrix)[m + i + 1][m + task->kth_stage];
                 dot += el1 * el2;
             }
-            (*task->matrix)[m][m + task->kth_stage] = cbrt(dot);
+            (*matrix)[m][m + task->kth_stage] = cbrt(dot);
         }
 
         return task;
     }
+
+    vector<vector<double> >* matrix;
 };
 
 int main(int argc, char* argv[]) {
@@ -148,7 +135,7 @@ int main(int argc, char* argv[]) {
     std::vector<ff_node*> workers;
 
     for (size_t i = 0; i < num_workers; ++i) {
-        workers.push_back(new Worker());
+        workers.push_back(new Worker(&matrix));
     }
 
     farm.add_emitter(emitter);
@@ -168,4 +155,6 @@ int main(int argc, char* argv[]) {
     chrono.print_elapsed("WAVEFRONT");
 
     if (matrix_size <= 5) print_matrix(&matrix);
+
+    printf("Top Right Element: %.5f\n", (matrix)[0][0 + matrix_size - 1]);
 }

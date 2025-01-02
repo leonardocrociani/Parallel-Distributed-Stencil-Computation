@@ -39,4 +39,6 @@ int main(int argc, char* argv[]) {
     chrono.print_elapsed("WAVEFRONT");
 
     if (matrix_size <= 5) print_matrix(&matrix);
+
+    printf("Top Right Element: %.5f\n", (matrix)[0][0 + matrix_size - 1]);
 }
