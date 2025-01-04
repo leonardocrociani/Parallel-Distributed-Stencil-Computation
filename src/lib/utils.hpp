@@ -5,9 +5,9 @@
 
 using namespace std;
 
-int parse_args(int argc, char* argv[], vector<uint64_t*>& args) {
-    if (argc != args.size() + 1) {
-        cout << "Error: " << args.size() << " arguments are required! Given: " << argc - 1 << endl;
+int parse_args(int argc, char* argv[], vector<size_t*>& args) {
+    if (static_cast<size_t>(argc) != args.size() + 1) {
+        cout << "Warning: " << args.size() << " arguments are required! Given: " << argc - 1 << endl;
         return -1;
     }
 

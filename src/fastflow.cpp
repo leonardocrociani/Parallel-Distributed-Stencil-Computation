@@ -14,13 +14,13 @@
 using namespace ff;
 
 struct Task {
-    uint64_t row_start;
-    uint64_t row_end;
-    uint64_t kth_stage;
+    size_t row_start;
+    size_t row_end;
+    size_t kth_stage;
 };
 
 struct Emitter : ff_node_t<Task> {
-    Emitter(vector<vector<double> >* matrix, uint64_t num_workers, uint64_t matrix_size) : matrix(matrix), num_workers(num_workers), matrix_size(matrix_size) {}
+    Emitter(vector<vector<double> >* matrix, size_t num_workers, size_t matrix_size) : matrix(matrix), num_workers(num_workers), matrix_size(matrix_size) {}
 
     Task* svc(Task* task) override {
 
@@ -33,13 +33,13 @@ struct Emitter : ff_node_t<Task> {
         }
 
         if (active_workers == 0) {  // previous stage is completed or we just started
-            int num_computations = matrix_size - kth_stage;
+            size_t num_computations = matrix_size - kth_stage;
 
-            int base_tasks_assignment = num_computations / num_workers;
-            int remainder = num_computations % num_workers;
-            int prev = 0;
+            size_t base_tasks_assignment = num_computations / num_workers;
+            size_t remainder = num_computations % num_workers;
+            size_t prev = 0;
 
-            for (uint64_t i = 0; i < num_workers; i++) {
+            for (size_t i = 0; i < num_workers; i++) {
                 Task* task_i = new Task();
                 int iterations_to_do = base_tasks_assignment + (i < remainder ? 1 : 0);
 
@@ -60,7 +60,7 @@ struct Emitter : ff_node_t<Task> {
     }
 
     vector<vector<double> >* matrix;
-    uint64_t num_workers, matrix_size, active_workers = 0, kth_stage = 1;
+    size_t num_workers, matrix_size, active_workers = 0, kth_stage = 1;
 };
 
 struct Worker : ff_node_t<Task> {
@@ -68,11 +68,11 @@ struct Worker : ff_node_t<Task> {
 
     Task* svc(Task* task) override {
 
-        printf("Worker! Id: %d, core: %d\n", get_my_id(), ff_getMyCore());
+        //printf("Worker! Id: %d, core: %d\n", get_my_id(), ff_getMyCore());
 
-        for (uint64_t m = task->row_start; m < task->row_end; m++) {
+        for (size_t m = task->row_start; m < task->row_end; m++) {
             double dot = .0;
-            for (uint64_t i = 0; i < task->kth_stage; i++) {
+            for (size_t i = 0; i < task->kth_stage; i++) {
                 double el1 = (*matrix)[m][m + i];
                 double el2 = (*matrix)[m + i + 1][m + task->kth_stage];
                 dot += el1 * el2;
@@ -88,17 +88,21 @@ struct Worker : ff_node_t<Task> {
 
 int main(int argc, char* argv[]) {
     Chronometer chrono;
-    uint64_t matrix_size = 0, num_workers = 0;
+    size_t matrix_size = 1024, num_workers = ff_numCores() / 2;
     vector<vector<double> > matrix;
 
-    vector<uint64_t*> args;
+    vector<size_t*> args;
     args.push_back(&matrix_size);
     args.push_back(&num_workers);
-    if (-1 == parse_args(argc, argv, args)) return EXIT_FAILURE;
+    if (-1 == parse_args(argc, argv, args)) {
+        printf("The correct usage is: %s <matrix_size> <num_workers>\n", argv[0]);
+        printf("--> Defaulting to %ld matrix size and %ld workers <--\n", matrix_size, num_workers);
+    }
 
     build_matrix(&matrix, matrix_size);
 
-    printf("FF cores: %zd\n", ff_numCores());
+    //printf("FF cores: %zd\n", ff_numCores());
+    
     chrono.reset();
 
     /* ============ CORE COMPUTATION ============ */
@@ -114,10 +118,9 @@ int main(int argc, char* argv[]) {
     farm.add_emitter(emitter);
     farm.add_workers(workers);
     farm.wrap_around();
-    farm.set_scheduling_ondemand();
 
     if (farm.run_and_wait_end() < 0) {
-        error("running farm");
+        error("Farm execution failed!");
         return -1;
     }
 
