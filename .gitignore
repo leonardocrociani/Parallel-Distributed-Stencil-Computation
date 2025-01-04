@@ -2,3 +2,8 @@ src/*.o
 src/lib/fastflow
 src/fastflow
 .vscode
+src/*.o*
+src/mpi*SYM
+**/**/__pycache__
+scripts/data
+scripts/venv

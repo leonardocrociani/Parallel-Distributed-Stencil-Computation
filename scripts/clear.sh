@@ -1,0 +1,1 @@
+rm data/results/*.txt

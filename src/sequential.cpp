@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstdlib>
 #include <iostream>
 #include <string>
@@ -36,9 +37,12 @@ int main(int argc, char* argv[]) {
 
     /* ========================================== */
 
-    chrono.print_elapsed("WAVEFRONT");
+    double elapsed = chrono.elapsed();
+
+    printf("Elapsed milliseconds: %.5f\n", elapsed);
+    printf("Top right element: %.5f\n", matrix[0][matrix_size - 1]);
 
     if (matrix_size <= 5) print_matrix(&matrix);
 
-    printf("Top Right Element: %.5f\n", (matrix)[0][0 + matrix_size - 1]);
+    return 0;
 }

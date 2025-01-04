@@ -1,7 +1,7 @@
 CXX                = g++ -std=c++20
 OPTFLAGS	   = -O3 -DNDEBUG -ffast-math
 CXXFLAGS          += -Wall -DNO_DEFAULT_MAPPING
-INCLUDES           = -I. -I./include -I ./lib/fastflow 
+INCLUDES           = -I. -I./lib -I ./lib/fastflow 
 LIBS               = -pthread
 SOURCES            = $(wildcard *.cpp)
 TARGETS            = $(SOURCES:.cpp=)
@@ -14,6 +14,9 @@ TARGETS            = $(SOURCES:.cpp=)
 
 # Rule to compile all files
 all: $(TARGETS)
+
+mpi: mpi.cpp
+	mpicxx -std=c++20 -Wall -O3 -DNDEBUG -o mpi.o mpi.cpp
 
 # Clean rules
 clean: 

@@ -6,10 +6,10 @@ class Chronometer {
 
     void reset() { start_time = std::chrono::high_resolution_clock::now(); }
 
-    double elapsed() const {
-        std::chrono::high_resolution_clock::time_point end_time = std::chrono::high_resolution_clock::now();
-        std::chrono::duration<double> elapsed_seconds = end_time - start_time;
-        return elapsed_seconds.count();
+    auto elapsed() const {
+        auto end_time = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> elapsed_time = end_time - start_time;
+        return elapsed_time.count() * 1000;
     }
 
     void print_elapsed(std::string checkpoint) {

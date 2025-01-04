@@ -1,3 +1,4 @@
+#include <cmath>
 #include <cstdlib>
 #include <iostream>
 #include <numeric>
@@ -9,8 +10,6 @@
 #include "lib/fastflow/ff/farm.hpp"
 #include "lib/matrix.hpp"
 #include "lib/utils.hpp"
-
-// #define VERBOSE
 
 using namespace ff;
 
@@ -34,48 +33,24 @@ struct Emitter : ff_node_t<Task> {
         }
 
         if (active_workers == 0) {  // previous stage is completed or we just started
+            int num_computations = matrix_size - kth_stage;
 
-#ifdef VERBOSE
-            printf("============ STARTING STAGE: %d ============\n", kth_stage);
-#endif
+            int base_tasks_assignment = num_computations / num_workers;
+            int remainder = num_computations % num_workers;
+            int prev = 0;
 
-            // for the current kth_stage, i have to do γ = [matrix_size - k] task.
-            // if n_workers = 10, and γ = 5, i want to use just the first 5 workers.
-            // on the other hand, if num_workers = 10 and γ = 92, i want to assign 10 10 9 ... 9
+            for (uint64_t i = 0; i < num_workers; i++) {
+                Task* task_i = new Task();
+                int iterations_to_do = base_tasks_assignment + (i < remainder ? 1 : 0);
 
-            int num_iterations = matrix_size - kth_stage;
+                task_i->row_start = prev;
+                task_i->row_end = prev + iterations_to_do;
+                task_i->kth_stage = kth_stage;
 
-            if (num_iterations < num_workers) {
-                for (uint64_t i = 0; i < num_iterations; i++) {
-                    Task* task_i = new Task();
+                prev += iterations_to_do;
 
-                    task_i->row_start = i;
-                    task_i->row_end = i + 1;
-                    task_i->kth_stage = kth_stage;
-
-                    active_workers++;
-                    ff_send_out(task_i);
-                }
-            }
-
-            else {
-                int base_tasks_assignment = num_iterations / num_workers;
-                int remainder = num_iterations % num_workers;
-                int prev = 0;
-
-                for (uint64_t i = 0; i < num_workers; i++) {
-                    Task* task_i = new Task();
-                    int iterations_to_do = base_tasks_assignment + (i < remainder ? 1 : 0);
-
-                    task_i->row_start = prev;
-                    task_i->row_end = prev + iterations_to_do;
-                    task_i->kth_stage = kth_stage;
-
-                    prev += iterations_to_do;
-
-                    active_workers++;
-                    ff_send_out(task_i, i);
-                }
+                active_workers++;
+                ff_send_out(task_i, i);
             }
 
             kth_stage++;
@@ -89,14 +64,11 @@ struct Emitter : ff_node_t<Task> {
 };
 
 struct Worker : ff_node_t<Task> {
-
     Worker(vector<vector<double> >* matrix) : matrix(matrix) {}
 
     Task* svc(Task* task) override {
-        
-#ifdef VERBOSE
-        printf("\tReceived task -> row_start :: %d, row_end:: %d, ID: %d\n", task->row_start, task->row_end, get_my_id());
-#endif
+
+        printf("Worker! Id: %d, core: %d\n", get_my_id(), ff_getMyCore());
 
         for (uint64_t m = task->row_start; m < task->row_end; m++) {
             double dot = .0;
@@ -126,6 +98,7 @@ int main(int argc, char* argv[]) {
 
     build_matrix(&matrix, matrix_size);
 
+    printf("FF cores: %zd\n", ff_numCores());
     chrono.reset();
 
     /* ============ CORE COMPUTATION ============ */
@@ -143,8 +116,6 @@ int main(int argc, char* argv[]) {
     farm.wrap_around();
     farm.set_scheduling_ondemand();
 
-    printf("\n🚜 [FARM STARTING]\n\tmatrix_size => %llu\n\tnum_workers => %llu\n\n", matrix_size, num_workers);
-
     if (farm.run_and_wait_end() < 0) {
         error("running farm");
         return -1;
@@ -152,9 +123,12 @@ int main(int argc, char* argv[]) {
 
     /* ========================================== */
 
-    chrono.print_elapsed("WAVEFRONT");
+    double elapsed = chrono.elapsed();
+
+    printf("Elapsed milliseconds: %.5f\n", elapsed);
+    printf("Top Right Element: %.5f\n", (matrix)[0][0 + matrix_size - 1]);
 
     if (matrix_size <= 5) print_matrix(&matrix);
 
-    printf("Top Right Element: %.5f\n", (matrix)[0][0 + matrix_size - 1]);
+    return 0;
 }
