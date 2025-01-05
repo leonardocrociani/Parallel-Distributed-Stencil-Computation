@@ -1,4 +1,5 @@
 #include <mpi.h>
+#include <omp.h>
 
 #include <cmath>
 #include <cstdlib>
@@ -57,6 +58,7 @@ int main(int argc, char* argv[]) {
         // compute the local results
         vector local_results(iterations_to_do, 0.0);
 
+        #pragma omp parallel for num_threads(2)
         for (size_t m = row_start; m < row_end; m++) {
             double dot = 0.0;
             for (size_t i = 0; i < kth_stage; i++) {
