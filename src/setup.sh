@@ -40,7 +40,7 @@ read -p "Would you like to execute the tests? (y/n): " execute_tests
 if [ "$execute_tests" == "y" ]; then
     clear
 
-    echo "Executing tests... MATRIX_SIZE=1024, PROCESSES/WORKERS=4"
+    echo "Executing tests... MATRIX_SIZE=1024, FF_WORKERS=4, MPI_PROCESSES=2"
 
     sleep 1
 
@@ -54,7 +54,7 @@ if [ "$execute_tests" == "y" ]; then
 
     printf "\n\nRunning tests for mpi...\n"
 
-    mpirun -np 4 ./mpi 1024 || { echo "Error while executing the mpi version"; exit 1; }
+    srun --mpi=pmix --nodes 2 ./mpi 1024 || { echo "Error while executing the mpi version"; exit 1; }
 
     printf "\nTests completed.\n"
 
