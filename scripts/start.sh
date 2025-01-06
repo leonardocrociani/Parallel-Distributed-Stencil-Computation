@@ -15,7 +15,7 @@ echo "Environment created. Running tests and collecting results..."
 
 sleep 1
 
-TARGETS=("sequential" "fastflow" "mpi")
+TARGETS=("sequential" "mpi" "fastflow")
 
 for target in "${TARGETS[@]}"
 do

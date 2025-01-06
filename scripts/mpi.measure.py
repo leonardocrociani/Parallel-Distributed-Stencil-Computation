@@ -11,7 +11,7 @@ BENCH_MPI_MATRIX_SIZES = [i * BASE_MATRIX_SIZE for i in range(1, BENCH_MPI_PROCE
 
 for matrix_size in tqdm(BENCH_MPI_MATRIX_SIZES, desc="Matrix Sizes", leave=False):
     for processes in tqdm(BENCH_MPI_PROCESSES, desc="Processes", leave=False):
-        timing = run_and_get_time(f'mpirun -np {processes} ../src/mpi {matrix_size}')
+        timing = run_and_get_time(f'srun --mpi=pmix --nodes {processes} ../src/mpi {matrix_size}')
         csv += f'{matrix_size},{processes},{timing}\n'
         
 with open('./data/results/mpi.csv', 'w') as f:

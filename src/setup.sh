@@ -46,15 +46,15 @@ if [ "$execute_tests" == "y" ]; then
 
     printf "\n\nRunning tests for sequential...\n"
 
-    ./sequential.o 1024 || { echo "Error while executing the sequential version"; exit 1; }
+    ./sequential 1024 || { echo "Error while executing the sequential version"; exit 1; }
 
     printf "\n\nRunning tests for fastflow...\n"
 
-    ./fastflow.o 1024 4 || { echo "Error while executing the fastflow version"; exit 1; }
+    ./fastflow 1024 4 || { echo "Error while executing the fastflow version"; exit 1; }
 
     printf "\n\nRunning tests for mpi...\n"
 
-    mpirun -np 4 ./mpi.o 1024 || { echo "Error while executing the mpi version"; exit 1; }
+    mpirun -np 4 ./mpi 1024 || { echo "Error while executing the mpi version"; exit 1; }
 
     printf "\nTests completed.\n"
 
