@@ -23,7 +23,9 @@ def plot_results(version, strong_scalability_matrix_sizes=[1024, 2048]): # code 
 
     lines = data.strip().split('\n')
     rows = [line.split(',') for line in lines[1:]]
-    parsed_data = [(int(row[0]), int(row[1]), float(row[2])) for row in rows]
+    parsed_data = [(int(row[0]), int(row[1]), float(row[2])) for row in rows]  # (matrix_size, processes/workers, time)
+
+    NUM_MPI_THREADS = 20 if version == 'mpi' else 1 # 20 thread are used for each process in the mpi version
 
     for matrix_size in strong_scalability_matrix_sizes:
         size_data = [d for d in parsed_data if d[0] == matrix_size]
@@ -38,7 +40,8 @@ def plot_results(version, strong_scalability_matrix_sizes=[1024, 2048]): # code 
         seq_time = sequential_times[matrix_size]
         speedup = [seq_time / t for t in times]
         
-        efficiency = [s / w for s, w in zip(speedup, workers)]
+        efficiency = [s / (w*NUM_MPI_THREADS) for s, w in zip(speedup, workers)]
+        
         
         plt.figure(figsize=(10, 6))
         
@@ -77,6 +80,8 @@ def plot_results(version, strong_scalability_matrix_sizes=[1024, 2048]): # code 
         
         time = size_data[0][2]
         
+        w = (w*NUM_MPI_THREADS)
+        
         seq_time = sequential_times[matrix_size]
         speedup_val = seq_time / time
         eff_val = speedup_val / w  
@@ -85,7 +90,7 @@ def plot_results(version, strong_scalability_matrix_sizes=[1024, 2048]): # code 
         labels_x.append(f'({w}, {matrix_size})')
         speedup.append(speedup_val)
         efficiency.append(eff_val)
-
+        
     plt.figure(figsize=(10, 6))
 
     plt.plot(workers, speedup, marker='o', label='Speedup')

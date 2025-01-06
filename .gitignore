@@ -1,5 +1,7 @@
 src/*.o
 src/lib/fastflow
+src/sequential
+src/mpi
 src/fastflow
 .vscode
 src/*.o*
