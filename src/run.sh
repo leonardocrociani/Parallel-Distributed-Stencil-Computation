@@ -11,7 +11,7 @@ fi
 
 clear 
 
-echo "Setting up environment...\n\n"
+printf "Setting up environment...\n\n"
 
 sleep 1
 
@@ -19,7 +19,7 @@ printf "(1/2) Cloning fastflow...\n\n"
 
 if [ -d "lib/fastflow" ]; then
 
-    echo "    Fastflow already cloned."
+    printf "    Fastflow already cloned.\n\n"
 
 else
 
