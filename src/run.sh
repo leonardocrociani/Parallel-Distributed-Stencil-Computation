@@ -11,11 +11,11 @@ fi
 
 clear 
 
-echo "Setting up environment..."
+echo "Setting up environment...\n\n"
 
 sleep 1
 
-echo "  (1/2) Cloning fastflow..."
+printf "(1/2) Cloning fastflow...\n\n"
 
 if [ -d "lib/fastflow" ]; then
 
@@ -29,11 +29,11 @@ else
 
 fi
 
-echo "  (2/2) Building source..."
+printf "(2/2) Building source...\n\n"
 
 make || { echo "Error during source building..."; exit 1; }
 
-echo "Environment setup completed."
+printf "Environment setup completed.\n\n"
 
 read -p "Would you like to execute the tests? (y/n): " execute_tests
 
