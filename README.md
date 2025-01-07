@@ -1,5 +1,5 @@
 # Running the code
 
-Once moved to the `src` directory, run `./run.sh`. 
+Once moved to the `src` directory, run `./run-all.sh`. 
 
 That's it.
