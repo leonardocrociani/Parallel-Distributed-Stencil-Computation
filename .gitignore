@@ -9,3 +9,4 @@ src/mpi*SYM
 **/**/__pycache__
 scripts/data
 scripts/venv
+src/jobs/*.log

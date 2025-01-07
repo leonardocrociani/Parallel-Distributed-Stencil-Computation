@@ -54,7 +54,7 @@ if [ "$execute_tests" == "y" ]; then
 
     printf "\n\nRunning tests for mpi...\n"
 
-    OMP_NUM_THREADS=20 srun --mpi=pmix --nodes 2 ./mpi 1024 || { echo "Error while executing the mpi version"; exit 1; }
+    (sbatch -W jobs/mpi-job.sh && cat jobs/output_mpi.log && rm jobs/output_mpi.log) || { echo "Error while executing the mpi version"; exit 1; }
 
     printf "\nTests completed.\n"
 
