@@ -3,8 +3,7 @@ MPICXX 			   = mpic++
 STDFLAGS           = -std=c++20
 OPTFLAGS	       = -O3 -DNDEBUG -ffast-math
 CXXFLAGS          += -Wall 
-INCLUDES           = -I. -I./lib -I ./lib/fastflow 
-OMPFLAGS		   = -fopenmp
+INCLUDES           = -I. -I./lib -I ./lib/fastflow
 LIBS               = -pthread
 SOURCES            = $(wildcard *.cpp)
 TARGETS            = $(SOURCES:.cpp=)
@@ -17,7 +16,7 @@ TARGETS            = $(SOURCES:.cpp=)
 all: $(TARGETS)
 
 mpi: mpi.cpp
-	$(MPICXX) $(STDFLAGS) $(INCLUDES) $(CXXFLAGS) $(OPTFLAGS) -o mpi mpi.cpp $(OMPFLAGS)
+	$(MPICXX) $(STDFLAGS) $(INCLUDES) $(CXXFLAGS) $(OPTFLAGS) -o mpi mpi.cpp
 
 clean: 
 	-rm -fr mpi sequential fastflow
