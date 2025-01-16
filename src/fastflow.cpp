@@ -20,10 +20,9 @@ struct Task {
 };
 
 struct Emitter : ff_node_t<Task> {
-    Emitter(vector<vector<double> >* matrix, size_t num_workers, size_t matrix_size) : matrix(matrix), num_workers(num_workers), matrix_size(matrix_size) {}
+    Emitter(vector<vector<double>>* matrix, size_t num_workers, size_t matrix_size) : matrix(matrix), num_workers(num_workers), matrix_size(matrix_size) {}
 
     Task* svc(Task* task) override {
-
         if (matrix_size - kth_stage == 0) {  // we concluded all the stages
             return EOS;
         }
@@ -59,16 +58,15 @@ struct Emitter : ff_node_t<Task> {
         return GO_ON;
     }
 
-    vector<vector<double> >* matrix;
+    vector<vector<double>>* matrix;
     size_t num_workers, matrix_size, active_workers = 0, kth_stage = 1;
 };
 
 struct Worker : ff_node_t<Task> {
-    Worker(vector<vector<double> >* matrix) : matrix(matrix) {}
+    Worker(vector<vector<double>>* matrix) : matrix(matrix) {}
 
     Task* svc(Task* task) override {
-
-        //printf("Worker! Id: %d, core: %d\n", get_my_id(), ff_getMyCore());
+        // printf("Worker! Id: %d, core: %d\n", get_my_id(), ff_getMyCore());
 
         for (size_t m = task->row_start; m < task->row_end; m++) {
             double dot = .0;
@@ -83,13 +81,13 @@ struct Worker : ff_node_t<Task> {
         return task;
     }
 
-    vector<vector<double> >* matrix;
+    vector<vector<double>>* matrix;
 };
 
 int main(int argc, char* argv[]) {
     Chronometer chrono;
     size_t matrix_size = 1024, num_workers = ff_numCores() / 2;
-    vector<vector<double> > matrix;
+    vector<vector<double>> matrix;
 
     vector<size_t*> args;
     args.push_back(&matrix_size);
@@ -101,22 +99,31 @@ int main(int argc, char* argv[]) {
 
     build_matrix(&matrix, matrix_size);
 
-    //printf("FF cores: %zd\n", ff_numCores());
-    
+    // printf("FF cores: %zd\n", ff_numCores());
+
     chrono.reset();
 
     /* ============ CORE COMPUTATION ============ */
 
-    ff_farm farm;
-    Emitter emitter = Emitter(&matrix, num_workers, matrix_size);
-    std::vector<ff_node*> workers;
+    // ff_farm farm;
+    // Emitter emitter = Emitter(&matrix, num_workers, matrix_size);
+    // std::vector<ff_node*> workers;
 
+    // for (size_t i = 0; i < num_workers; ++i) {
+    //     workers.push_back(new Worker(&matrix));
+    // }
+
+    // farm.add_emitter(emitter);
+    // farm.add_workers(workers);
+    // farm.wrap_around();
+
+    std::vector<std::unique_ptr<ff_node>> workers;
     for (size_t i = 0; i < num_workers; ++i) {
-        workers.push_back(new Worker(&matrix));
+        workers.push_back(std::make_unique<Worker>(&matrix));
     }
 
-    farm.add_emitter(emitter);
-    farm.add_workers(workers);
+    ff_Farm<Task> farm(std::move(workers), std::make_unique<Emitter>(&matrix, num_workers, matrix_size));
+    farm.remove_collector();
     farm.wrap_around();
 
     if (farm.run_and_wait_end() < 0) {

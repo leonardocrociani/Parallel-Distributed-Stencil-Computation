@@ -10,3 +10,4 @@ src/mpi*SYM
 scripts/data
 scripts/venv
 src/jobs/*.log
+**/**/tmp

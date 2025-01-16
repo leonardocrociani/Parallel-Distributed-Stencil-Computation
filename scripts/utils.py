@@ -1,14 +1,19 @@
 import subprocess
 import matplotlib.pyplot as plt
-from config import MUST_EXISTS, FOLDER_TO_CREATE
+from config import MUST_EXISTS, FOLDER_TO_CREATE, BASE_MATRIX_SIZE
 import os
 
 def run_and_get_time(cmd):
-    output = subprocess.check_output(cmd, shell=True, text=True).strip().split('\n')[0]
+    output_lines = subprocess.check_output(cmd, shell=True, text=True).strip().split('\n')
+    output = None # intentionally. Will generate an error if there is not the expeceted output
+    for line in output_lines:
+        if 'Elapsed' in line:
+            output = line
+            break
     ms = output.split('Elapsed milliseconds: ')[1].strip()
     return float(ms)
 
-def plot_results(version, strong_scalability_matrix_sizes=[1024, 2048]): # code can be 'mpi' or 'fastflow'
+def plot_results(version, strong_scalability_matrix_sizes=[1024, 2048, 3072, 4096, 5120, 8192]): # version can be 'mpi' or 'fastflow'
 
     #########################################   Strong Scalability   ###################################
 
@@ -25,8 +30,6 @@ def plot_results(version, strong_scalability_matrix_sizes=[1024, 2048]): # code 
     rows = [line.split(',') for line in lines[1:]]
     parsed_data = [(int(row[0]), int(row[1]), float(row[2])) for row in rows]  # (matrix_size, processes/workers, time)
 
-    NUM_MPI_THREADS = 20 if version == 'mpi' else 1 # 20 thread are used for each process in the mpi version
-
     for matrix_size in strong_scalability_matrix_sizes:
         size_data = [d for d in parsed_data if d[0] == matrix_size]
         
@@ -40,7 +43,7 @@ def plot_results(version, strong_scalability_matrix_sizes=[1024, 2048]): # code 
         seq_time = sequential_times[matrix_size]
         speedup = [seq_time / t for t in times]
         
-        efficiency = [s / (w*NUM_MPI_THREADS) for s, w in zip(speedup, workers)]
+        efficiency = [s / w for s, w in zip(speedup, workers)]
         
         
         plt.figure(figsize=(10, 6))
@@ -50,7 +53,7 @@ def plot_results(version, strong_scalability_matrix_sizes=[1024, 2048]): # code 
         plt.plot(workers, efficiency, marker='x', label=f'Efficiency', linestyle='--')
         
         plt.title(f'Strong Scalability - Speedup & Efficiency for Matrix Size {matrix_size} - {version.title()}')
-        plt.xlabel(f'Number of {"Workers" if version == "fastflow" else "Processes"}')
+        plt.xlabel(f'Number of {"Threads" if version == "fastflow" else "Processes"}')
         plt.ylabel('Speedup / Efficiency')
         
         plt.legend()
@@ -60,11 +63,10 @@ def plot_results(version, strong_scalability_matrix_sizes=[1024, 2048]): # code 
         plt.savefig(f'./data/plots/{version}/strong_scalability_{matrix_size}.png')
         plt.close()
 
-
     ##########################################   Weak Scalability   ####################################
 
     workers_set = sorted(set(d[1] for d in parsed_data))  
-    matrix_sizes = [w * 512 for w in workers_set]  
+    matrix_sizes = [w * BASE_MATRIX_SIZE for w in workers_set]  
 
     workers = []
     speedup = []
@@ -73,14 +75,12 @@ def plot_results(version, strong_scalability_matrix_sizes=[1024, 2048]): # code 
 
     for w, matrix_size in zip(workers_set, matrix_sizes):
         size_data = [d for d in parsed_data if d[0] == matrix_size and d[1] == w]
-        
+
         if not size_data:
             print(f"Nessun dato trovato per workers={w} e matrix_size={matrix_size}.")
             continue
         
         time = size_data[0][2]
-        
-        w = (w*NUM_MPI_THREADS)
         
         seq_time = sequential_times[matrix_size]
         speedup_val = seq_time / time
@@ -97,14 +97,17 @@ def plot_results(version, strong_scalability_matrix_sizes=[1024, 2048]): # code 
     plt.xticks(workers, labels_x)
 
 
+    plt.xticks(ticks=workers, labels=labels_x, rotation=30, horizontalalignment='right')
+
     plt.plot(workers, efficiency, marker='x', label='Efficiency', linestyle='--')
     
     plt.title(f'Weak Scalability - Speedup & Efficiency - {version.title()}')
-    plt.xlabel(f'(Number of {"Workers" if version == "fastflow" else "Processes"}, Matrix Size)')
+    plt.xlabel(f'(Number of {"Threads" if version == "fastflow" else "Processes"}, Matrix Size)')
     plt.ylabel('Speedup / Efficiency')
 
     plt.legend()
     plt.grid()
+
 
     plt.tight_layout()
     plt.savefig(f'./data/plots/{version}/weak_scalability.png')

@@ -14,5 +14,8 @@ plt.plot(x, y)
 plt.xlabel('Matrix size')
 plt.ylabel('Time (ms)')
 plt.title('Sequential execution time')
+        
+plt.grid()
 
 plt.savefig('./data/plots/sequential/sequential.png')
+plt.close()

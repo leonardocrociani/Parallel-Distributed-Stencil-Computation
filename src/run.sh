@@ -11,7 +11,7 @@ if [ $# -lt 2 ]; then
   echo "Parameters:"
   echo "  sequential: <matrix size>"
   echo "  fastflow: <matrix size> <num workers>"
-  echo "  mpi: <matrix size> <num threads> <num nodes>"
+  echo "  mpi: <matrix size> <num processes per node> <num nodes>"
   exit 1
 fi
 
@@ -25,21 +25,21 @@ case $TARGET in
       echo "Usage for sequential: ./run sequential <matrix size>"
       exit 1
     fi
-    ./sequential "${PARAMS[0]}"
+    srun --nodes=1 --ntasks=1 --cpus-per-task=1 ./sequential "${PARAMS[0]}"
     ;;
   fastflow)
     if [ ${#PARAMS[@]} -ne 2 ]; then
       echo "Usage for fastflow: ./run fastflow <matrix size> <num workers>"
       exit 1
     fi
-    ./fastflow "${PARAMS[0]}" "${PARAMS[1]}"
+    srun --nodes=1 --ntasks=1 --cpus-per-task="$(echo "${PARAMS[1]} + 1" | bc)" ./fastflow "${PARAMS[0]}" "${PARAMS[1]}"
     ;;
   mpi)
     if [ ${#PARAMS[@]} -ne 3 ]; then
-      echo "Usage for mpi: ./run mpi <matrix size> <num threads> <num nodes>"
+      echo "Usage for mpi: ./run mpi <matrix size> <num processes per node> <num nodes>"
       exit 1
     fi
-    OMP_NUM_THREADS="${PARAMS[1]}" srun --mpi=pmix --nodes="${PARAMS[2]}" ./mpi "${PARAMS[0]}"
+    srun --mpi=pmix --nodes="${PARAMS[2]}" --ntasks="$(echo "${PARAMS[1]} * ${PARAMS[2]}" | bc)" --ntasks-per-node=${PARAMS[1]} ./mpi "${PARAMS[0]}"
     ;;
   *)
     echo "Invalid target: $TARGET"

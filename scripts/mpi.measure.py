@@ -1,4 +1,4 @@
-from config import BENCH_MPI_PROCESSES, BASE_MATRIX_SIZE
+from config import CLUSTER_NODES, BASE_MATRIX_SIZE, PROCESSES_PER_NODE
 from utils import run_and_get_time
 import os
 from tqdm import tqdm
@@ -7,12 +7,15 @@ csv = 'matrix_size,processes,time\n'
 
 os.system('cd ../src && make mpi')
 
-BENCH_MPI_MATRIX_SIZES = [i * BASE_MATRIX_SIZE for i in range(1, BENCH_MPI_PROCESSES[-1] + 1)]
+PROCESSES = [i for i in range(2, (CLUSTER_NODES * PROCESSES_PER_NODE) + 1, 2)] # 2, 4, 6 ... 16
+MATRIX_SIZES = [p * BASE_MATRIX_SIZE for p in PROCESSES]
 
-for matrix_size in tqdm(BENCH_MPI_MATRIX_SIZES, desc="Matrix Sizes", leave=False):
-    for processes in tqdm(BENCH_MPI_PROCESSES, desc="Processes", leave=False):
-        timing = run_and_get_time(f'OMP_NUM_THREADS=20 srun --mpi=pmix --nodes {processes} ../src/mpi {matrix_size}')
+for matrix_size in tqdm(MATRIX_SIZES, desc="Matrix Sizes"):
+    for processes in tqdm(PROCESSES, desc=f"Processes (Matrix Size: {matrix_size})", leave=False):
+        nodes = int(processes / PROCESSES_PER_NODE)
+        cmd = f'srun --time=01:00:00 --mpi=pmix --nodes={nodes} --ntasks={processes} --ntasks-per-node={PROCESSES_PER_NODE} ../src/mpi {matrix_size}'
+        timing = run_and_get_time(cmd)
         csv += f'{matrix_size},{processes},{timing}\n'
-        
+
 with open('./data/results/mpi.csv', 'w') as f:
     f.write(csv)

@@ -7,7 +7,7 @@ if [ "$current_dir" != "scripts" ]; then
     exit 1
 fi
 
-python3 -m venv venv && source venv/bin/activate &&  pip install -r requirements.txt
+python3 -m venv venv && source venv/bin/activate && pip install -r requirements.txt
 
 clear
 
@@ -23,12 +23,18 @@ do
 
     echo "Running tests for $target..."
 
-    sleep 1
+    if [[ $? -ne 0 ]]; then
+        echo "Failed to allocate resources for $target. Skipping..."
+        continue
+    fi
 
-    python "$target".measure.py
-    python "$target".plot.py
+    python "$target.measure.py"
+    python "$target.plot.py"
 
     echo "Tests for $target completed."
+
+    scancel -u "$USER" &
+    sleep 5
 done
 
 clear

@@ -40,17 +40,17 @@ read -p "Would you like to execute the tests? (y/n): " execute_tests
 if [ "$execute_tests" == "y" ]; then
     clear
 
-    echo "Executing tests... MATRIX_SIZE=1024, FF_WORKERS=4, MPI_PROCESSES=2"
+    echo "Executing tests... MATRIX_SIZE=1024, FF_WORKERS=4, MPI_PROCESSES=4 (2 nodes)"
 
     sleep 1
 
     printf "\n\nRunning tests for sequential...\n"
 
-    ./sequential 1024 || { echo "Error while executing the sequential version"; exit 1; }
+    (sbatch -W jobs/sequential-job.sh && cat jobs/output_sequential.log && rm jobs/output_sequential.log) || { echo "Error while executing the sequential version"; exit 1; }
 
     printf "\n\nRunning tests for fastflow...\n"
 
-    ./fastflow 1024 4 || { echo "Error while executing the fastflow version"; exit 1; }
+    (sbatch -W jobs/fastflow-job.sh && cat jobs/output_fastflow.log && rm jobs/output_fastflow.log) || { echo "Error while executing the fastflow version"; exit 1; }
 
     printf "\n\nRunning tests for mpi...\n"
 
