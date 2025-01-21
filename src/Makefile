@@ -1,7 +1,7 @@
 CXX                = g++
 MPICXX 			   = mpic++
 STDFLAGS           = -std=c++20
-OPTFLAGS	       = -O3 -DNDEBUG -ffast-math
+OPTFLAGS	       = -O3 -DNDEBUG -ffast-math -march=native
 CXXFLAGS          += -Wall 
 INCLUDES           = -I. -I./lib -I ./lib/fastflow
 LIBS               = -pthread

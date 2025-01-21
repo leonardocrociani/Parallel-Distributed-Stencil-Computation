@@ -13,7 +13,6 @@
 int main(int argc, char* argv[]) {
     Chronometer chrono;
     size_t matrix_size = 1024;
-    vector<vector<double> > matrix;
     int rank, num_processes;
 
     vector<size_t*> args;
@@ -23,13 +22,16 @@ int main(int argc, char* argv[]) {
         printf("--> Defaulting to matrix size: %ld\n", matrix_size);
     }
 
-    build_matrix(&matrix, matrix_size);
+    matrix_t matrix = build_matrix(matrix_size);
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &num_processes);
 
     MPI_Barrier(MPI_COMM_WORLD);
+
+    vector receive_counts(num_processes, 0); // moved outside avoiding re-allocation
+    vector displacements(num_processes, 0);
 
     chrono.reset();
 
@@ -43,9 +45,6 @@ int main(int argc, char* argv[]) {
         size_t remainder = num_computations % num_processes;
         size_t iterations_to_do = base_process_load + (static_cast<size_t>(rank) < remainder ? 1 : 0);
 
-        vector receive_counts(num_processes, 0);
-        vector displacements(num_processes, 0);
-
         for (size_t rank_i = 0; rank_i < static_cast<size_t>(num_processes); rank_i++) {
             receive_counts[rank_i] = base_process_load + (rank_i < remainder ? 1 : 0);
             displacements[rank_i] = rank_i == 0 ? 0 : displacements[rank_i - 1] + receive_counts[rank_i - 1];
@@ -57,15 +56,7 @@ int main(int argc, char* argv[]) {
         // compute the local results
         vector local_results(iterations_to_do, 0.0);
 
-        for (size_t m = row_start; m < row_end; m++) {
-            double dot = 0.0;
-            for (size_t i = 0; i < kth_stage; i++) {
-                double el1 = matrix[m][m + i];
-                double el2 = matrix[m + i + 1][m + kth_stage];
-                dot += el1 * el2;
-            }
-            local_results[m - row_start] = cbrt(dot);
-        }
+       compute_task_mpi(matrix, row_start, row_end, kth_stage, &local_results);
 
         // exchange the values with the other processes
         vector results(num_computations, 0.0);
@@ -75,9 +66,7 @@ int main(int argc, char* argv[]) {
         );
 
         // update the matrix values
-        for (size_t m = 0; m < num_computations; m++) {
-            matrix[m][m + kth_stage] = results[m];
-        }
+        update_matrix_mpi(matrix, num_computations, kth_stage, &results);
     }
 
     /* ========================================== */
@@ -91,10 +80,12 @@ int main(int argc, char* argv[]) {
         printf("Elapsed milliseconds: %.5f\n", max_elapsed);    
         printf("Top right element: %.5f\n", matrix[0][matrix_size - 1]);
 
-        if (matrix_size <= 5) print_matrix(&matrix);
+        if (matrix_size <= 5) print_matrix(matrix, matrix_size);
     }
 
     MPI_Finalize();
     
+    free_matrix(matrix, matrix_size);
+
     return 0;
 }

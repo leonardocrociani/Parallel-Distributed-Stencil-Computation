@@ -23,7 +23,7 @@ if [ -d "lib/fastflow" ]; then
 
 else
 
-    pushd lib > /dev/null && git clone https://github.com/fastflow/fastflow.git && cd fastflow/ff && ./mapping_string.sh || { echo "Error during fastflow cloning..."; exit 1; }
+    pushd lib > /dev/null && git clone https://github.com/fastflow/fastflow.git && cd fastflow/ff && srun -N 1 ./mapping_string.sh || { echo "Error during fastflow cloning..."; exit 1; }
 
     popd > /dev/null
 

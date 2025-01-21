@@ -20,11 +20,11 @@ struct Task {
 };
 
 struct Emitter : ff_node_t<Task> {
-    Emitter(double** matrix, size_t num_workers, size_t matrix_size, Task* task_set)
-        : matrix(matrix), num_workers(num_workers), matrix_size(matrix_size), task_set(task_set) {}
+    Emitter(double** matrix, size_t num_workers, size_t matrix_size, Task* task_set) : task_set(task_set), matrix(matrix), num_workers(num_workers), matrix_size(matrix_size) {}
 
     Task* svc(Task* task) override {
-        if (matrix_size - kth_stage == 0) {  // all stages completed
+        if (matrix_size - kth_stage == 1) {  // all stages completed
+            compute_task(matrix, 0, matrix_size - kth_stage, kth_stage);
             return EOS;
         }
 
@@ -35,22 +35,25 @@ struct Emitter : ff_node_t<Task> {
         if (active_workers == 0) {  // ready for the next stage
             size_t num_computations = matrix_size - kth_stage;
 
-            size_t base_tasks_assignment = num_computations / num_workers;
-            size_t remainder = num_computations % num_workers;
+            size_t base_tasks_assignment = num_computations / (num_workers + 1);
+            size_t remainder = num_computations % (num_workers + 1);
             size_t prev = 0;
+            size_t necessary_workers = base_tasks_assignment == 0 ? remainder - 1 : num_workers;
 
-            for (size_t i = 0; i < num_workers; i++) {
+            for (size_t i = 0; i < necessary_workers; ++i) {
                 size_t iterations_to_do = base_tasks_assignment + (i < remainder ? 1 : 0);
 
                 task_set[i].row_start = prev;
                 task_set[i].row_end = prev + iterations_to_do;
                 task_set[i].kth_stage = kth_stage;
 
-                prev += iterations_to_do;
+                ff_send_out(&task_set[i]);
 
+                prev += iterations_to_do;
                 active_workers++;
-                ff_send_out(&task_set[i], i);
             }
+
+            compute_task(matrix, prev, matrix_size - kth_stage, kth_stage);
 
             kth_stage++;
         }
@@ -67,22 +70,11 @@ struct Worker : ff_node_t<Task> {
     Worker(double** matrix) : matrix(matrix) {}
 
     Task* svc(Task* task) override {
-        for (size_t m = task->row_start; m < task->row_end; m++) {
-            double dot = .0;
-            for (size_t i = 0; i < task->kth_stage; i++) {
-                double el1 = matrix[m][m + i];
-                double el2 = matrix[m + task->kth_stage][m + i + 1];
-                dot += el1 * el2;
-            }
-            dot = cbrt(dot);
-            matrix[m][m + task->kth_stage] = dot;
-            matrix[m + task->kth_stage][m] = dot;
-        }
-
+        compute_task(matrix, task->row_start, task->row_end, task->kth_stage);
         return task;
     }
 
-    double** matrix;
+    matrix_t matrix;
 };
 
 int main(int argc, char* argv[]) {
@@ -97,19 +89,9 @@ int main(int argc, char* argv[]) {
         printf("--> Defaulting to %ld matrix size and %ld workers <--\n", matrix_size, num_workers);
     }
 
-    double** matrix = new double*[matrix_size];
-    for (size_t i = 0; i < matrix_size; ++i) {
-        matrix[i] = new double[matrix_size]();
-        for (size_t j = 0; j < matrix_size; ++j) {
-            matrix[i][j] = (i == j) ? static_cast<double>(i + 1) / matrix_size : 0.0;
-        }
-    }
+    matrix_t matrix = build_matrix(matrix_size);
 
     Task* task_set = new Task[num_workers];
-
-    chrono.reset();
-
-    /* ============ CORE COMPUTATION ============ */
 
     std::vector<std::unique_ptr<ff_node>> workers;
     for (size_t i = 0; i < num_workers; ++i) {
@@ -119,6 +101,11 @@ int main(int argc, char* argv[]) {
     ff_Farm<Task> farm(std::move(workers), std::make_unique<Emitter>(matrix, num_workers, matrix_size, task_set));
     farm.remove_collector();
     farm.wrap_around();
+    farm.set_scheduling_ondemand();
+
+    chrono.reset();
+
+    /* ============ CORE COMPUTATION ============ */
 
     if (farm.run_and_wait_end() < 0) {
         error("Farm execution failed!");
@@ -132,11 +119,8 @@ int main(int argc, char* argv[]) {
     printf("Elapsed milliseconds: %.5f\n", elapsed);
     printf("Top Right Element: %.5f\n", matrix[0][matrix_size - 1]);
 
-    // Cleanup
-    for (size_t i = 0; i < matrix_size; ++i) {
-        delete[] matrix[i];
-    }
-    delete[] matrix;
+    free_matrix(matrix, matrix_size);
+
     delete[] task_set;
 
     return 0;
