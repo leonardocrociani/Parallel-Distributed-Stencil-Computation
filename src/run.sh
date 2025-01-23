@@ -1,6 +1,6 @@
 #!/bin/bash
 
-srun make all
+srun make || { echo "Error during source building..."; exit 1; }
 if [ $? -ne 0 ]; then
   echo "Build failed. Please fix the errors and try again."
   exit 1
@@ -39,7 +39,7 @@ case $TARGET in
       echo "Usage for mpi: ./run mpi <matrix size> <num processes> <num nodes>"
       exit 1
     fi
-    srun --mpi=pmix --nodes="${PARAMS[2]}" --ntasks="$(echo "${PARAMS[1]} * ${PARAMS[2]}" | bc)" --ntasks-per-node=${PARAMS[1]} ./mpi "${PARAMS[0]}"
+    srun --mpi=pmix --nodes="${PARAMS[2]}" --ntasks="${PARAMS[1]}" ./mpi "${PARAMS[0]}"
     ;;
   *)
     echo "Invalid target: $TARGET"
