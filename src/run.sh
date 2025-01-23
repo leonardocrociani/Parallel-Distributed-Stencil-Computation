@@ -1,6 +1,6 @@
 #!/bin/bash
 
-make all
+srun make all
 if [ $? -ne 0 ]; then
   echo "Build failed. Please fix the errors and try again."
   exit 1
