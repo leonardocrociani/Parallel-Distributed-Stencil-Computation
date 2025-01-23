@@ -33,11 +33,11 @@ int main(int argc, char* argv[]) {
     vector receive_counts(num_processes, 0); // moved outside avoiding re-allocation
     vector displacements(num_processes, 0);
 
-    chrono.reset();
+    double start_time = MPI_Wtime();
 
     /* ============ CORE COMPUTATION ============ */
 
-    for (size_t kth_stage = 1; kth_stage < matrix_size; kth_stage++) {
+    for (size_t kth_stage = 1; kth_stage < matrix_size - 1; kth_stage++) {
         // compute which is my range of action
         size_t num_computations = matrix_size - kth_stage;
 
@@ -53,7 +53,7 @@ int main(int argc, char* argv[]) {
         size_t row_start = displacements[rank];
         size_t row_end = row_start + iterations_to_do;
 
-        // compute the local results
+        // compute the local result
         vector local_results(iterations_to_do, 0.0);
 
        compute_task_mpi(matrix, row_start, row_end, kth_stage, &local_results);
@@ -69,16 +69,25 @@ int main(int argc, char* argv[]) {
         update_matrix_mpi(matrix, num_computations, kth_stage, &results);
     }
 
+    // save last useless communication and compute only with the master that has to show the result (the others can reach the time measurement)
+    if (!rank) {
+        double dot = 0.0;
+        for (size_t i = 0; i < matrix_size - 1; ++i) {
+            dot += matrix[0][i] * matrix[matrix_size - 1][i + 1]; // matrix[0][0 + i] * matrix[0 + matrix_size - 1][0 + i + 1];
+        }
+        matrix[0][matrix_size - 1] = cbrt(dot);
+    }
+
     /* ========================================== */
 
-    double elapsed = chrono.elapsed();
+    double elapsed = (MPI_Wtime() - start_time) * 1000;
     double max_elapsed = 0.0;
 
     MPI_Reduce(&elapsed, &max_elapsed, 1, MPI_DOUBLE, MPI_MAX, 0, MPI_COMM_WORLD);
 
     if (!rank) {
         printf("Elapsed milliseconds: %.5f\n", max_elapsed);    
-        printf("Top right element: %.5f\n", matrix[0][matrix_size - 1]);
+        printf("Top right element: %.5f\n", get_top_right_element(matrix, matrix_size));
 
         if (matrix_size <= 5) print_matrix(matrix, matrix_size);
     }

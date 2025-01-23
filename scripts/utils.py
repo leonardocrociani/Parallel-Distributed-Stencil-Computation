@@ -1,11 +1,11 @@
 import subprocess
 import matplotlib.pyplot as plt
-from config import MUST_EXISTS, FOLDER_TO_CREATE, BASE_MATRIX_SIZE
+from config import MUST_EXISTS, FOLDER_TO_CREATE, FF_WEAK_SCALING_MATRIX_SIZE, MPI_WEAK_SCALING_MATRIX_SIZE
 import os
 
 def run_and_get_time(cmd):
     output_lines = subprocess.check_output(cmd, shell=True, text=True).strip().split('\n')
-    output = None # intentionally. Will generate an error if there is not the expeceted output
+    output = None  # intentionally. Will generate an error if there is not the expected output
     for line in output_lines:
         if 'Elapsed' in line:
             output = line
@@ -13,7 +13,7 @@ def run_and_get_time(cmd):
     ms = output.split('Elapsed milliseconds: ')[1].strip()
     return float(ms)
 
-def plot_results(version, strong_scalability_matrix_sizes=[1024, 2048, 3072, 4096, 5120, 8192]): # version can be 'mpi' or 'fastflow'
+def plot_results(version, strong_scalability_matrix_sizes=[1024, 1280, 1536, 1792, 2048, 2304, 2560, 2816, 3072]):  # version can be 'mpi' or 'fastflow'
 
     #########################################   Strong Scalability   ###################################
 
@@ -45,12 +45,11 @@ def plot_results(version, strong_scalability_matrix_sizes=[1024, 2048, 3072, 409
         
         efficiency = [s / w for s, w in zip(speedup, workers)]
         
-        
-        plt.figure(figsize=(10, 6))
+        plt.figure(figsize=(10, 10))
         
         plt.plot(workers, speedup, marker='o', label=f'Speedup')
-        
         plt.plot(workers, efficiency, marker='x', label=f'Efficiency', linestyle='--')
+        plt.plot(workers, workers, color='green', linestyle='-', label='Ideal Speedup')  # Added ideal speedup line
         
         plt.title(f'Strong Scalability - Speedup & Efficiency for Matrix Size {matrix_size} - {version.title()}')
         plt.xlabel(f'Number of {"Threads" if version == "fastflow" else "Processes"}')
@@ -66,7 +65,7 @@ def plot_results(version, strong_scalability_matrix_sizes=[1024, 2048, 3072, 409
     ##########################################   Weak Scalability   ####################################
 
     workers_set = sorted(set(d[1] for d in parsed_data))  
-    matrix_sizes = [w * BASE_MATRIX_SIZE for w in workers_set]  
+    matrix_sizes = [w * (FF_WEAK_SCALING_MATRIX_SIZE if version == 'fastflow' else MPI_WEAK_SCALING_MATRIX_SIZE) for w in workers_set]  
 
     workers = []
     speedup = []
@@ -91,23 +90,20 @@ def plot_results(version, strong_scalability_matrix_sizes=[1024, 2048, 3072, 409
         speedup.append(speedup_val)
         efficiency.append(eff_val)
         
-    plt.figure(figsize=(10, 6))
+    plt.figure(figsize=(10, 10))
 
     plt.plot(workers, speedup, marker='o', label='Speedup')
-    plt.xticks(workers, labels_x)
-
+    plt.plot(workers, efficiency, marker='x', label='Efficiency', linestyle='--')
+    plt.plot(workers, workers, color='green', linestyle='-', label='Ideal Speedup')  # Added ideal speedup line
 
     plt.xticks(ticks=workers, labels=labels_x, rotation=30, horizontalalignment='right')
 
-    plt.plot(workers, efficiency, marker='x', label='Efficiency', linestyle='--')
-    
     plt.title(f'Weak Scalability - Speedup & Efficiency - {version.title()}')
     plt.xlabel(f'(Number of {"Threads" if version == "fastflow" else "Processes"}, Matrix Size)')
     plt.ylabel('Speedup / Efficiency')
 
     plt.legend()
     plt.grid()
-
 
     plt.tight_layout()
     plt.savefig(f'./data/plots/{version}/weak_scalability.png')

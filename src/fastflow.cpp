@@ -117,7 +117,7 @@ int main(int argc, char* argv[]) {
     double elapsed = chrono.elapsed();
 
     printf("Elapsed milliseconds: %.5f\n", elapsed);
-    printf("Top Right Element: %.5f\n", matrix[0][matrix_size - 1]);
+    printf("Top Right Element: %.5f\n", get_top_right_element(matrix,matrix_size));
 
     free_matrix(matrix, matrix_size);
 

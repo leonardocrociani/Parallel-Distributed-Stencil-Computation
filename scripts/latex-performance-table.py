@@ -6,7 +6,15 @@ def generate_latex_table(version):
 
     lines = data.strip().split('\n')
     rows = [line.split(',') for line in lines[1:]]
-    parsed_data = [(int(row[0]), int(row[1]), int(float(row[2]))) for row in rows]  # (matrix_size, processes, milliseconds)
+    
+    
+    parsed_data = []
+    if version == 'fastflow':
+        parsed_data = [(int(row[0]), int(row[1]), int(float(row[2]))) for row in rows]  # (matrix_size, processes, milliseconds)
+    else:
+        parsed_data = [(int(row[0]), int(row[1]), int(row[2]), int(float(row[3]))) for row in rows] # (matrix_size, processes, nodes, milliseconds)
+        parsed_data = [row for row in parsed_data if row[1] / row[2] == 1]
+        parsed_data = [(row[0], row[1], row[3]) for row in parsed_data]
 
     df = pd.DataFrame(parsed_data, columns=['matrix_size', 'processes', 'milliseconds'])
 

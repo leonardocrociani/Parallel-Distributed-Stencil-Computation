@@ -31,7 +31,7 @@ fi
 
 printf "(2/2) Building source...\n\n"
 
-make || { echo "Error during source building..."; exit 1; }
+srun make || { echo "Error during source building..."; exit 1; }
 
 printf "Environment setup completed.\n\n"
 

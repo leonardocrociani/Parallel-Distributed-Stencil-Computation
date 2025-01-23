@@ -11,7 +11,7 @@ if [ $# -lt 2 ]; then
   echo "Parameters:"
   echo "  sequential: <matrix size>"
   echo "  fastflow: <matrix size> <num workers>"
-  echo "  mpi: <matrix size> <num processes per node> <num nodes>"
+  echo "  mpi: <matrix size> <num processes> <num nodes>"
   exit 1
 fi
 
@@ -36,7 +36,7 @@ case $TARGET in
     ;;
   mpi)
     if [ ${#PARAMS[@]} -ne 3 ]; then
-      echo "Usage for mpi: ./run mpi <matrix size> <num processes per node> <num nodes>"
+      echo "Usage for mpi: ./run mpi <matrix size> <num processes> <num nodes>"
       exit 1
     fi
     srun --mpi=pmix --nodes="${PARAMS[2]}" --ntasks="$(echo "${PARAMS[1]} * ${PARAMS[2]}" | bc)" --ntasks-per-node=${PARAMS[1]} ./mpi "${PARAMS[0]}"

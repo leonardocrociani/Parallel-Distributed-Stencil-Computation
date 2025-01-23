@@ -1,21 +1,23 @@
-from config import CLUSTER_NODES, BASE_MATRIX_SIZE, PROCESSES_PER_NODE
+from config import MPI_WEAK_SCALING_MATRIX_SIZE, MAX_MPI_PROCESSES, CLUSTER_NODES
 from utils import run_and_get_time
 import os
 from tqdm import tqdm
 
-csv = 'matrix_size,processes,time\n'
+os.system('cd ../src && make clean && srun make mpi')
 
-os.system('cd ../src && make mpi')
+PROCESSES = [1] + [i for i in range(2, MAX_MPI_PROCESSES + 1, 2)] # 2, 4, 6 ... 16
+MATRIX_SIZES = [p * MPI_WEAK_SCALING_MATRIX_SIZE for p in PROCESSES]
+NODES = [1, 2, 4, 8]
 
-PROCESSES = [i for i in range(2, (CLUSTER_NODES * PROCESSES_PER_NODE) + 1, 2)] # 2, 4, 6 ... 16
-MATRIX_SIZES = [p * BASE_MATRIX_SIZE for p in PROCESSES]
+csv = 'matrix_size,processes,nodes,time\n'
+for nodes in NODES:
+    for matrix_size in tqdm(MATRIX_SIZES, desc="Matrix Sizes"):
+        for processes in tqdm(PROCESSES, desc=f"Processes (Matrix Size: {matrix_size})", leave=False):
+            if processes < nodes:
+                continue
+            cmd = f'srun --time=01:00:00 --mpi=pmix --nodes={nodes} --ntasks={processes} ../src/mpi {matrix_size}'
+            timing = run_and_get_time(cmd)
+            csv += f'{matrix_size},{processes},{nodes},{timing}\n'
 
-for matrix_size in tqdm(MATRIX_SIZES, desc="Matrix Sizes"):
-    for processes in tqdm(PROCESSES, desc=f"Processes (Matrix Size: {matrix_size})", leave=False):
-        nodes = int(processes / PROCESSES_PER_NODE)
-        cmd = f'srun --time=01:00:00 --mpi=pmix --nodes={nodes} --ntasks={processes} --ntasks-per-node={PROCESSES_PER_NODE} ../src/mpi {matrix_size}'
-        timing = run_and_get_time(cmd)
-        csv += f'{matrix_size},{processes},{timing}\n'
-
-with open('./data/results/mpi.csv', 'w') as f:
+with open(f'./data/results/mpi.csv', 'w') as f:
     f.write(csv)

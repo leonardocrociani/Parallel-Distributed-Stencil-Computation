@@ -12,7 +12,12 @@ def get_best_speedups(version, K=3):
 
     lines = data.strip().split('\n')
     rows = [line.split(',') for line in lines[1:]]
-    parsed_data = [(int(row[0]), int(row[1]), float(row[2])) for row in rows]  # (matrix_size, #pe, milliseconds)
+    if version == 'fastflow':
+        parsed_data = [(int(row[0]), int(row[1]), float(row[2])) for row in rows]  # (matrix_size, #pe, milliseconds)
+    else:
+        parsed_data = [(int(row[0]), int(row[1]), int(row[2]), int(float(row[3]))) for row in rows] # (matrix_size, processes, nodes, milliseconds)
+        parsed_data = [row for row in parsed_data if row[0] and row[1] and row[2] and row[3]]
+        parsed_data = [(row[0], row[1], row[3]) for row in parsed_data]
     
     df = pd.DataFrame(parsed_data, columns=['matrix_size', 'pe', 'milliseconds'])
 

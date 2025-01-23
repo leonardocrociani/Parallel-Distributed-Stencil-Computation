@@ -8,7 +8,8 @@ REPEAT_BENCHMARKS = False
 USE_ALL_CORES = True
 
 BASE_CORES =  int(subprocess.check_output('lstopo-no-graphics | grep Core | wc -l', shell=True, text=True).strip())
-BASE_MATRIX_SIZE = 512
+MPI_WEAK_SCALING_MATRIX_SIZE = 512
+FF_WEAK_SCALING_MATRIX_SIZE = 256
+MAX_MPI_PROCESSES = 16
 CLUSTER_NODES = 8
-PROCESSES_PER_NODE = 2
-FF_MAX_WORKERS = 19 # 1 is used for the emitter.
+FF_MAX_THREADS = 16 # 16 phisical core - 1 (used for the emitter).

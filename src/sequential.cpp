@@ -34,6 +34,7 @@ int main(int argc, char* argv[]) {
     double elapsed = chrono.elapsed();
 
     printf("Elapsed milliseconds: %.5f\n", elapsed);
+    printf("Top right element: %.5f\n", get_top_right_element(matrix, matrix_size));
 
     if (matrix_size <= 5) print_matrix(matrix, matrix_size);
 

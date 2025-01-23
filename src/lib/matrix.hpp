@@ -60,3 +60,7 @@ void free_matrix(matrix_t matrix, size_t matrix_size) {
     }
     delete[] matrix;
 }
+
+double get_top_right_element(matrix_t matrix, size_t matrix_size) {
+    return matrix[0][matrix_size-1];
+}
